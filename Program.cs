@@ -4,17 +4,22 @@ using System.Net;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Threading.Channels;
+using System.Data;
 
 namespace DVLink_Server
 {
     public class JlWebSocketServer
     {
+        /// <summary>
+        /// 波形字典
+        /// </summary>
         public static Dictionary<int, string[]> pulseDic = new Dictionary<int, string[]>
         {
-            {1,["0A0A0A0A03090C0F", "0A0A0A0A1215181B", "0A0A0A0A1E212427", "0A0A0A0A2A2D3033", "0A0A0A0A36393C3F", "0A0A0A0A4245484B", "0A0A0A0A4E515457", "0A0A0A0A5A5D6063", "0A0A0A0A64646464", "0A0A0A0A00000000"] },
-            {2,["0A0A0A0A03090C0F", "0A0A0A0A1215181B", "0A0A0A0A1E212427", "0A0A0A0A2A2D3033", "0A0A0A0A36393C3F", "0A0A0A0A4245484B", "0A0A0A0A4E515457", "0A0A0A0A5A5D6063", "0A0A0A0A64646464", "0A0A0A0A00000000"] },
-            {3,["0A0A0A0A03090C0F", "0A0A0A0A1215181B", "0A0A0A0A1E212427", "0A0A0A0A2A2D3033", "0A0A0A0A36393C3F", "0A0A0A0A4245484B", "0A0A0A0A4E515457", "0A0A0A0A5A5D6063", "0A0A0A0A64646464", "0A0A0A0A00000000"] },
-            {4,["0A0A0A0A03090C0F", "0A0A0A0A1215181B", "0A0A0A0A1E212427", "0A0A0A0A2A2D3033", "0A0A0A0A36393C3F", "0A0A0A0A4245484B", "0A0A0A0A4E515457", "0A0A0A0A5A5D6063", "0A0A0A0A64646464", "0A0A0A0A00000000"] }
+            {1,["0A0A0A0A03090C0F","0A0A0A0A1215181B","0A0A0A0A1E212427","0A0A0A0A2A2D3033","0A0A0A0A36393C3F","0A0A0A0A4245484B","0A0A0A0A4E515457","0A0A0A0A5A5D6063","0A0A0A0A64646464","0A0A0A0A00000000"]},
+            {2,["0A0A0A0A64646464","0A0A0A0A00000000","0A0A0A0A64646464","0A0A0A0A00000000","0A0A0A0A64646464","0A0A0A0A00000000","0A0A0A0A64646464","0A0A0A0A00000000","0A0A0A0A64646464","0A0A0A0A00000000"]},
+            {3,["0A0A0A0A14141414","0A0A0A0A00000000","0A0A0A0A28282828","0A0A0A0A00000000","0A0A0A0A3C3C3C3C","0A0A0A0A00000000","0A0A0A0A50505050","0A0A0A0A00000000","0A0A0A0A64646464","0A0A0A0A00000000"]},
+            {4,["1A1B1C1D64646464","1E1F202164646464","2223242564646464","2627282964646464","2A2B2C2D64646464","2E2F303164646464","3233343564646464","3637383964646464","3A3B3C3D64646464","3E3F404164646464"]}
         };
         /// <summary>
         /// 客户端字典
@@ -51,7 +56,6 @@ namespace DVLink_Server
             listener.Prefixes.Add($"http://{ip}:{port}/");
             listener.Start();
             Console.WriteLine($"开始监听端口:{port}");
-
             while (true)
             {
                 HttpListenerContext context = await listener.GetContextAsync();
@@ -166,6 +170,12 @@ namespace DVLink_Server
                     case "ResetClientPulse":
                         ResetClientPulse(json, uuid);
                         break;
+                    case "ChangeRoomState":
+                        ChangeRoomState(uuid);
+                        break;
+                    case "GesturePulse":
+                        GesturePulse(json, uuid);
+                        break;
                     default:
                         break;
                 }
@@ -210,6 +220,7 @@ namespace DVLink_Server
             {
                 webSocketContext = await context.AcceptWebSocketAsync(null);
                 Console.WriteLine($"客户端{uuid}已连接");
+
                 //客户端连接成功后，将其添加到clients字典中
                 WebSocket socket = webSocketContext.WebSocket;
                 clients.TryAdd(clientId, socket);
@@ -282,7 +293,6 @@ namespace DVLink_Server
                         }
                     }
                 }
-
                 if (webSocketContext != null)
                     webSocketContext.WebSocket.Dispose();
                 wsSendDic.TryRemove(clients[clientId], out _);
@@ -299,14 +309,11 @@ namespace DVLink_Server
         private static async Task ReceiveMessages(string uuid, WebSocket socket)
         {
             byte[] buffer = new byte[1024];
-
             try
             {
                 while (socket.State == WebSocketState.Open)
                 {
-
                     WebSocketReceiveResult result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-
                     if (result.MessageType == WebSocketMessageType.Text)
                     {
                         string receivedMessage = Encoding.UTF8.GetString(buffer, 0, result.Count);
@@ -359,8 +366,7 @@ namespace DVLink_Server
                 WebSocket app = clients[controlApp];
                 await SendMessage(app, strengthMessage);
             }
-            catch
-            (Exception ex)
+            catch(Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
@@ -395,7 +401,6 @@ namespace DVLink_Server
                 }
                 StrengthHelper strengthHelper = new StrengthHelper();
                 int strength = Convert.ToInt16(json["message"]);
-
                 switch (channel)
                 {
                     case 1:
@@ -464,7 +469,7 @@ namespace DVLink_Server
                 }
                 PulseHelper pulseHelper = new PulseHelper();
                 int time = pulseDic[pulse].Length;
-                string pulseMessage = pulseHelper.Channel_Set(controlClient, controlApp, channel, pulse);
+                string pulseMessage = pulseHelper.GetPulseJson(controlClient, controlApp, channel, pulse);
                 WebSocket app = clients[controlApp];
                 AddPulseTimer(controlClient, controlApp, channel, time, pulseMessage);
             }
@@ -473,6 +478,48 @@ namespace DVLink_Server
                 Console.WriteLine(ex.Message);
             }
         }
+        /// <summary>
+        /// 手势控制波形
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="uuid"></param>
+        private static async void GesturePulse(JObject json,string uuid)
+        {
+            try
+            {
+                if (!clientRoom.ContainsKey(uuid)) return;
+                RoomClass room = roomDic[clientRoom[uuid]];
+                int controlId = Convert.ToInt16(json["controlId"]);
+                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
+                string controlClient = room.roomClients[controlId];
+                string channel = json["channel"]!.ToString();
+                if (channel == "A")
+                {
+                    if (appState[controlClient].aPulse != "0") return;
+                }
+                else if (channel == "B")
+                {
+                    if (appState[controlClient].bPulse != "0") return;
+                }
+                string pulseJson = json["message"]!.ToString();
+                if (pulseJson == "") return;
+                string controlApp = clientAppDic[controlClient];
+                PulseHelper pulseHelper = new PulseHelper();
+                string pulseMessage = pulseHelper.GetPulseJson(controlClient, controlApp, channel, pulseJson);
+                WebSocket app = clients[controlApp];
+                await SendMessage(app, pulseMessage);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 重置客户端波形
+        /// </summary>
+        /// <param name="json"></param>
+        /// <param name="uuid"></param>
         private static void ResetClientPulse(JObject json, string uuid)
         {
             try
@@ -539,11 +586,6 @@ namespace DVLink_Server
             try
             {
                 if (clientRoom.ContainsKey(clientId)) return;
-                if (roomDic.ContainsKey(RoomId))
-                {
-                    if (roomDic[RoomId].roomPlayerNum >= 4)
-                        return;
-                }
                 clientRoom.TryAdd(clientId, RoomId);
                 if (!roomDic.ContainsKey(RoomId))
                 {
@@ -566,6 +608,9 @@ namespace DVLink_Server
                 }
                 else
                 {
+                    if (roomDic[RoomId].isLocked) return;
+                    if (roomDic[RoomId].roomPlayerNum >= 4)
+                        return;
                     WebSocket webSocket = clients[clientId];
                     MessageJson messageJson = new()
                     {
@@ -581,13 +626,22 @@ namespace DVLink_Server
                     Console.WriteLine($"房间{RoomId}内客户端:{string.Join(",", roomDic[RoomId].roomClients)}");
                 }
             }
-
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }
         }
-
+        /// <summary>
+        /// 改变房间状态(上锁)
+        /// </summary>
+        /// <param name="clientId"></param>
+        private static void ChangeRoomState(string clientId)
+        {
+            if (!clientRoom.ContainsKey(clientId)) return;
+            if (!roomDic.ContainsKey(clientRoom[clientId])) return;
+            roomDic[clientRoom[clientId]].ChangeRoomState();
+            roomDic[clientRoom[clientId]].SendRoomStateToAllClient();
+        }
         /// <summary>
         /// 绑定客户端
         /// </summary>
@@ -631,7 +685,6 @@ namespace DVLink_Server
                         await SendMessage(client, res);
                         await SendMessage(target, res);
                     }
-
                 }
                 else
                 {
@@ -649,7 +702,12 @@ namespace DVLink_Server
                 Console.WriteLine(ex.Message);
             }
         }
-
+        /// <summary>
+        /// 更新APP状态
+        /// </summary>
+        /// <param name="clientId"></param>
+        /// <param name="appId"></param>
+        /// <param name="msg"></param>
         private static void updateAppState(string clientId, string appId, string msg)
         {
             try
@@ -704,14 +762,16 @@ namespace DVLink_Server
                 timer.Start();
                 clientTimer[key] = timer;
             }
-
         }
+
+
+
 
         /// <summary>
         /// 移除波形定时器
         /// </summary>
         /// <param name="clientId"></param>
-        private static void RemovePulseTimer(string clientId)
+        private static async void RemovePulseTimer(string clientId)
         {
             foreach (var item in clientTimer)
             {
@@ -723,8 +783,31 @@ namespace DVLink_Server
             }
             appState[clientId].aPulse = "0";
             appState[clientId].bPulse = "0";
+            MessageJson messageJsonA = new()
+            {
+                type = "msg",
+                clientId = clientId,
+                targetId = clientAppDic[clientId],
+                message = "clear-1"
+            };
+            MessageJson messageJsonB = new()
+            {
+                type = "msg",
+                clientId = clientId,
+                targetId = clientAppDic[clientId],
+                message = "clear-2"
+            };
+            string messageA = JsonConvert.SerializeObject(messageJsonA);
+            string messageB = JsonConvert.SerializeObject(messageJsonB);
+            await SendMessage(clients[clientAppDic[clientId]], messageA);
+            await SendMessage(clients[clientAppDic[clientId]], messageB);
         }
-        private static void RemovePulseTimer(string clientId, string channel)
+        /// <summary>
+        /// 移除指定波形定时器
+        /// </summary>
+        /// <param name="clientId"></param>
+        /// <param name="channel"></param>
+        private static async void RemovePulseTimer(string clientId, string channel)
         {
             string key = clientId + $"+{channel}";
             if (clientTimer.ContainsKey(key))
@@ -732,8 +815,25 @@ namespace DVLink_Server
                 clientTimer[key].Stop();
                 clientTimer.TryRemove(key, out _);
             }
+            string clearMessage;
+            if (channel == "A")
+            {
+                clearMessage = "clear-1";
+            }
+            else
+            {
+                clearMessage = "clear-2";
+            }
+            MessageJson messageJson = new()
+            { 
+                type = "msg",
+                clientId = clientId,
+                targetId = clientAppDic[clientId],
+                message = clearMessage
+            };
+            string message = JsonConvert.SerializeObject(messageJson);
+            await SendMessage(clients[clientAppDic[clientId]], message);
         }
-
         /// <summary>
         /// 发送消息
         /// </summary>
@@ -755,15 +855,19 @@ namespace DVLink_Server
                 Console.WriteLine(ex.Message);
             }
         }
-
+        /// <summary>
+        /// 主函数
+        /// </summary>
+        /// <param name="args"></param>
         public static void Main(string[] args)
         {
-            int port = 12548;
+            string jsonString = File.ReadAllText("Config.json");
+            JObject config = JObject.Parse(jsonString);
+            int port = Convert.ToInt16(config["port"]);
             string ip = "*";
             Task task = Start(ip, port);
             // 创建定时器，指定间隔时间
             System.Timers.Timer heartBeat = new System.Timers.Timer(60000);
-
             // 设置定时器触发事件
             heartBeat.Elapsed += async (sender, e) =>
             {
@@ -804,7 +908,6 @@ namespace DVLink_Server
             public string targetId = "";
             public string message = "";
         }
-
         /// <summary>
         /// APP状态类
         /// </summary>

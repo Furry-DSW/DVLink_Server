@@ -7,10 +7,18 @@ using System.Threading.Tasks;
 
 namespace DVLink_Server
 {
+    /// <summary>
+    /// 发送信息锁类
+    /// </summary>
     public class SocketSend
     {
         private readonly object _instanceLock = new object();
-
+        /// <summary>
+        /// 发送信息给指定客户端
+        /// </summary>
+        /// <param name="socket"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
         public Task SendMessageAsync(WebSocket socket, string message)
         {
             try

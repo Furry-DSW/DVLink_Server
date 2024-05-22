@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace DVLink_Server
 {
+    /// <summary>
+    /// 房间类
+    /// </summary>
     public class RoomClass
     {
         /// <summary>
@@ -54,7 +57,9 @@ namespace DVLink_Server
             roomClients.Remove(clientId);
             roomPlayerNum--;
         }
-
+        /// <summary>
+        /// 改变房间状态
+        /// </summary>
         public void ChangeRoomState()
         {
             isLocked = !isLocked;
@@ -95,14 +100,23 @@ namespace DVLink_Server
                 await JlWebSocketServer.SendMessage(item, message);
             }
         }
-
+        /// <summary>
+        /// 发送房间状态给所有客户端
+        /// </summary>
+        public async void SendRoomStateToAllClient()
+        {
+            JlWebSocketServer.MessageJson json = new()
+            {
+                type = "roomState",
+                message = isLocked.ToString()
+            };
+            string result = JsonConvert.SerializeObject(json);
+            await SendToAllClient(roomClients, result);
+        }
     }
-    public class AmmoInfo
-    {
-        public int playerId;
-        public int strength;
-        public int time;
-    }
+    /// <summary>
+    /// 所有APP状态
+    /// </summary>
     public class AllAppState
     {
         public string type = "";

@@ -7,24 +7,38 @@ using System.Threading.Tasks;
 
 namespace DVLink_Server
 {
+    /// <summary>
+    /// 波形强度辅助类
+    /// </summary>
     public class PulseHelper
     {
-
-        public string Channel_Set(string clientId, string appId, string channel, int pulse)
+        public string GetPulseJson(string clientId, string appId, string channel, int pulse)
         {
             PulseJson json = new()
             {
                 clientId = clientId,
                 targetId = appId
             };
-            string pulsejson = JsonConvert.SerializeObject(JlWebSocketServer.pulseDic[pulse]);
-            string pulseMessage = $"pulse-{channel}:{pulsejson}";
+            string pulseJson = JsonConvert.SerializeObject(JlWebSocketServer.pulseDic[pulse]);
+            string pulseMessage = $"pulse-{channel}:{pulseJson}";
+            json.message = pulseMessage;
+            string result = JsonConvert.SerializeObject(json);
+            return result;
+        }
+
+        public string GetPulseJson(string clientId, string appId, string channel, string pulseJson)
+        {
+            PulseJson json = new()
+            {
+                clientId = clientId,
+                targetId = appId
+            };
+            string pulseMessage = $"pulse-{channel}:{pulseJson}";
             json.message = pulseMessage;
             string result = JsonConvert.SerializeObject(json);
             return result;
         }
     }
-
     /// <summary>
     /// 强度Json
     /// </summary>

@@ -2,6 +2,9 @@
 
 namespace DVLink_Server
 {
+    /// <summary>
+    /// 强度辅助类
+    /// </summary>
     public class StrengthHelper
     {
         /// <summary>
@@ -64,7 +67,6 @@ namespace DVLink_Server
             string result = JsonConvert.SerializeObject(json);
             return result;
         }
-
         /// <summary>
         /// 强度Json
         /// </summary>
