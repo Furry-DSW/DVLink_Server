@@ -358,8 +358,8 @@ namespace DVLink_Server
                 if (!clientRoom.ContainsKey(uuid)) return;
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
-                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 string controlApp = clientAppDic[controlClient];
                 StrengthHelper strengthHelper = new StrengthHelper();
                 string strengthMessage = strengthHelper.Channel_Set(controlClient, controlApp, Convert.ToInt16(json["channel"]), Convert.ToInt16(json["message"]));
@@ -384,8 +384,8 @@ namespace DVLink_Server
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
                 int time = Convert.ToInt16(json["time"]);
-                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 string controlApp = clientAppDic[controlClient];
                 AppState State = appState[controlClient];
                 int channel = Convert.ToInt16(json["channel"]);
@@ -429,6 +429,7 @@ namespace DVLink_Server
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 AppState State = appState[controlClient];
                 State.aBusy = false;
                 State.bBusy = false;
@@ -447,8 +448,8 @@ namespace DVLink_Server
                 if (!clientRoom.ContainsKey(uuid)) return;
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
-                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 string controlApp = clientAppDic[controlClient];
                 string channel = json["channel"]!.ToString();
                 int pulse = Convert.ToInt16(json["message"]);
@@ -490,8 +491,8 @@ namespace DVLink_Server
                 if (!clientRoom.ContainsKey(uuid)) return;
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
-                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 string channel = json["channel"]!.ToString();
                 if (channel == "A")
                 {
@@ -527,8 +528,8 @@ namespace DVLink_Server
                 if (!clientRoom.ContainsKey(uuid)) return;
                 RoomClass room = roomDic[clientRoom[uuid]];
                 int controlId = Convert.ToInt16(json["controlId"]);
-                if (controlId < 0 || controlId > room.roomPlayerNum - 1) return;
                 string controlClient = room.roomClients[controlId];
+                if (controlClient == "") return;
                 RemovePulseTimer(controlClient);
                 room.SendStateToAllClient();
             }

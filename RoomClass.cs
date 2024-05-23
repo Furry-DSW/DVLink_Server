@@ -14,6 +14,13 @@ namespace DVLink_Server
     /// </summary>
     public class RoomClass
     {
+        public RoomClass()
+        {
+            roomClients.TryAdd(0, "");
+            roomClients.TryAdd(1, "");
+            roomClients.TryAdd(2, "");
+            roomClients.TryAdd(3, "");
+        }
         /// <summary>
         /// 房间锁定
         /// </summary>
@@ -21,41 +28,43 @@ namespace DVLink_Server
         /// <summary>
         /// 房间内客户端字典
         /// </summary>
-        public List<string> roomClients = [];
+        public ConcurrentDictionary<int, string> roomClients = new();
         /// <summary>
         /// 房间内客户端数量
         /// </summary>
         public int roomPlayerNum;
-        /// <summary>
-        /// 发送信息给指定客户端
-        /// </summary>
-        /// <param name="clientId"></param>
-        /// <param name="message"></param>
-        /// <returns></returns>
-        private static async Task SendToClient(string clientId, string message)
-        {
-            WebSocket socket = JlWebSocketServer.clients[clientId];
-            byte[] buffer = Encoding.UTF8.GetBytes(message);
-            await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
-            //Console.WriteLine($"Sent: {message}");
-        }
         /// <summary>
         /// 添加客户端
         /// </summary>
         /// <param name="clientId"></param>
         public void AddClient(string clientId)
         {
-            roomClients.Add(clientId);
-            roomPlayerNum++;
+            foreach (var item in roomClients)
+            {
+                if (item.Value == "")
+                {
+                    roomClients[item.Key] = clientId;
+                    roomPlayerNum++;
+                    break;
+                }
+            }
         }
+
         /// <summary>
         /// 删除客户端
         /// </summary>
         /// <param name="clientId"></param>
         public void RemoveClient(string clientId)
         {
-            roomClients.Remove(clientId);
-            roomPlayerNum--;
+            foreach (var item in roomClients)
+            {
+                if (item.Value == clientId)
+                {
+                    roomClients[item.Key] = "";
+                    roomPlayerNum--;
+                    break;
+                }
+            }
         }
         /// <summary>
         /// 改变房间状态
@@ -72,7 +81,10 @@ namespace DVLink_Server
             List<JlWebSocketServer.AppState> appStates = new();
             foreach (var item in roomClients)
             {
-                appStates.Add(JlWebSocketServer.appState[item]);
+                if (item.Value != "")
+                    appStates.Add(JlWebSocketServer.appState[item.Value]);
+                else
+                    appStates.Add(new JlWebSocketServer.AppState());
             }
             AllAppState json = new()
             {
@@ -88,12 +100,13 @@ namespace DVLink_Server
         /// <param name="roomClients"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        private static async Task SendToAllClient(List<string> roomClients, string message)
+        private static async Task SendToAllClient(ConcurrentDictionary<int, string> roomClients, string message)
         {
             List<WebSocket> webSockets = new();
             foreach(var item in roomClients)
             {
-                webSockets.Add(JlWebSocketServer.clients[item]);
+                if (item.Value != "")
+                    webSockets.Add(JlWebSocketServer.clients[item.Value]);
             }
             foreach (var item in webSockets)
             {
